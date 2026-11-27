@@ -174,7 +174,7 @@ global.window = {};
 const out = {
   extra: state.text["k-extra"], dscrUn: state.text["k-dscr-un"],
   dscrHg: state.text["k-dscr-hg"], cost: state.text["k-cost"],
-  green: state.text["g-service"], chart: (state.text["chart-inner-html"]||"").length,
+  serviceChart: state.text["service-chart-html"], bridgeChart: state.text["bridge-chart-html"], sensitivityChart: state.text["sensitivity-chart-html"], green: state.text["g-service"], chart: (state.text["chart-inner-html"]||"").length,
   rows: (state.text["tbody-html"]||"").split("<tr>").length - 1
 };
 process.stdout.write(JSON.stringify(out));
@@ -188,6 +188,10 @@ process.stdout.write(JSON.stringify(out));
         self.assertTrue(result["dscrHg"].endswith("x"))
         self.assertGreater(result["chart"], 500, "chart should draw bars")
         self.assertEqual(result["rows"], CASE["years"])
+        for key in ("serviceChart", "bridgeChart", "sensitivityChart"):
+            self.assertGreater(len(result[key]), 500, key)
+            self.assertNotIn("NaN", result[key])
+            self.assertNotIn("Infinity", result[key])
         self.assertNotIn('id="co2"', html)
         self.assertIn("constructed teaching case", html)
 

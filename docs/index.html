@@ -1,41 +1,12 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Making Change — Academic FX laboratory</title>
-<link rel="stylesheet" href="dashboard.css">
-</head>
-<body>
-<div class="wrap">
-
-  <header>
-    <h1>Making Change</h1>
-    <span class="tag">academic prototype</span>
-  </header>
-  <p class="lede">
-    A project that earns in a local currency and borrows in a hard currency owes
-    more local currency when its money loses value. Adjust the assumptions and see
-    what it does to the debt — then what a hedge does, and what it costs.
-  </p>
-
-  <!-- ─────────── the case ─────────── -->
-  <section class="panel">
-    <h2>Classical teaching case · infrastructure SPV</h2>
-    <div class="kpis" style="margin-bottom:16px">
-      <div class="kpi"><dt>Project</dt><dd style="font-size:15px">Fictional infrastructure SPV</dd><small>CEMAC setting · not an observed company</small></div>
-      <div class="kpi"><dt>Debt</dt><dd style="font-size:15px">10,000,000 EUR</dd><small id="c-mat">15 years · 5.0 %</small></div>
-      <div class="kpi"><dt>Revenue currency</dt><dd style="font-size:15px">XAF</dd><small>pegged to the euro</small></div>
-      <div class="kpi"><dt>Rate at start</dt><dd style="font-size:15px">655.957</dd><small>XAF per 1 EUR</small></div>
-    </div>
-    <p class="hint" style="margin:0">
-      XAF/EUR is a <b>hard peg</b>: it is fixed by treaty, not by the market. So the
-      shock below is not an ordinary fluctuation — it is a <b>hypothetical break of
-      the parity</b>, an institutional event. The page labels it that way on purpose.
-    </p>
-  </section>
-
-  <section class="panel" aria-labelledby="assumptions-title">
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Making Change — Risque de change</title><link rel="stylesheet" href="dashboard.css"></head><body>
+<header><a class="brand" href="./">M<span>↗</span></a><div><strong>Making Change</strong><span class="subtitle">LABORATOIRE DE RISQUE DE CHANGE</span></div><span class="badge">RECHERCHE · CAS FICTIF</span></header>
+<div class="layout"><aside><div class="eyebrow">PARAMÈTRES</div><h2>Testez votre scénario</h2><p>Déplacez un curseur.<br>Les 4 graphiques réagissent.</p><div class="case"><b>Infrastructure · CEMAC</b><span>SPV fictive / dette en EUR</span><hr><span>Emprunt <b>10 M€</b></span><span>Durée <b>15 ans</b></span><span>Taux fixe <b>5 %</b></span></div><label class="control" for="shock"><span>Dépréciation du XAF<b><span id="shock-val">20</span> %</b></span><input id="shock" type="range" min="0" max="80" step="1" value="20"></label><label class="control" for="cov"><span>Part de dette protégée<b><span id="cov-val">50</span> %</b></span><input id="cov" type="range" min="0" max="100" step="5" value="50"></label><label class="control" for="cost"><span>Frais sur le service couvert<b><span id="cost-val">0</span> %</b></span><input id="cost" type="range" min="0" max="5" step="0.25" value="0"></label><label class="control" for="thr"><span>Seuil DSCR choisi<b><span id="thr-val">1.2</span> ×</b></span><input id="thr" type="range" min="0.8" max="2.5" step="0.05" value="1.2"></label><button id="reset" type="button">↺ Réinitialiser</button><div class="aside-note">XAF / EUR : parité fixe.<br>Le choc est une <b>rupture hypothétique de parité</b>, pas une prévision.</div></aside>
+<main><div class="heading"><div><div class="eyebrow">VUE D’ENSEMBLE / SIMULATION</div><h1>Le change fragilise-t-il le projet ?</h1><p>Comparez la même dette, sans protection et avec couverture.</p></div><span class="unit">EUR → XAF</span></div>
+<div class="kpis"><div class="kpi"><span>DSCR minimum · sans protection</span><strong id="k-dscr-un">—</strong><small>Trésorerie disponible / remboursement</small></div><div class="kpi"><span>DSCR minimum · avec protection</span><strong id="k-dscr-hg">—</strong><small id="k-dscr-sub">—</small></div><div class="kpi"><span>Surcoût du change · sans protection</span><strong id="k-extra">—</strong><small>XAF cumulés sur 15 ans</small></div><div class="kpi"><span>Frais de couverture</span><strong id="k-cost">—</strong><small>XAF cumulés sur 15 ans</small></div></div>
+<div class="takeaway" role="status" aria-live="polite"><b>À RETENIR</b><span id="insight">—</span></div>
+<div class="legend"><span class="key blue">Sans protection</span><span class="key teal">Avec protection</span><span class="key amber">Seuil DSCR choisi</span><span>Survolez les tracés pour les valeurs</span></div><div class="charts"><section class="visual"><div class="chart-title"><span>01</span><h2>Le projet peut-il rembourser ?</h2></div><p>DSCR par année · au-dessus du seuil = marge suffisante</p><svg class="chart" viewBox="0 0 600 230" role="img" aria-label="Le projet peut-il rembourser ?"><g id="chart-inner"></g></svg></section><section class="visual"><div class="chart-title"><span>02</span><h2>Combien faut-il rembourser ?</h2></div><p>Service annuel de la dette · millions de XAF</p><svg class="chart" viewBox="0 0 600 230" role="img" aria-label="Combien faut-il rembourser ?"><g id="service-chart"></g></svg></section><section class="visual"><div class="chart-title"><span>03</span><h2>D’où vient le coût total ?</h2></div><p>Du scénario sans choc au scénario protégé · millions de XAF</p><svg class="chart" viewBox="0 0 600 230" role="img" aria-label="D’où vient le coût total ?"><g id="bridge-chart"></g></svg></section><section class="visual"><div class="chart-title"><span>04</span><h2>Et si le choc s’aggrave ?</h2></div><p>DSCR minimum selon la dépréciation · point = choix actuel</p><svg class="chart" viewBox="0 0 600 230" role="img" aria-label="Et si le choc s’aggrave ?"><g id="sensitivity-chart"></g></svg></section></div>
+<details><summary>Voir les chiffres année par année</summary><div class="scroll"><table id="table"><thead><tr><th>Année</th><th>Service EUR</th><th>XAF/EUR</th><th>Sans protection XAF</th><th>Avec protection XAF</th><th>DSCR sans</th><th>DSCR avec</th></tr></thead><tbody></tbody></table></div></details>
+<details><summary>Méthode, hypothèses et références académiques</summary><p>Cas pédagogique construit, non calibré sur une entreprise réelle. Les références encadrent la question de recherche, pas les paramètres numériques. DSCR inférieur à 1 : trésorerie insuffisante pour le service de la dette. Au-dessus de 1 mais sous le seuil choisi : dette couverte, marge cible non atteinte.</p><p>Couverture théorique au spot initial (655,957 XAF/EUR), sans courbe de taux ni contrainte de liquidité. CFADS constant : 850 M XAF/an. Frais appliqués au service annuel couvert. Résultats nominaux cumulés, non actualisés. Simulation, pas un conseil financier.</p>  <section class="panel" aria-labelledby="assumptions-title">
     <h2 id="assumptions-title">Assumptions and provenance</h2>
     <p>This is a <strong>constructed teaching case</strong>, not a published business-school case or an empirical company study. No real company is assigned invented financial data.</p>
     <table aria-label="Assumption register"><thead><tr><th>Parameter</th><th>Assumption / status</th></tr></thead><tbody>
@@ -51,111 +22,6 @@
     <p class="hint">DSCR = annual cash flow available for debt service (CFADS) / annual debt service in XAF, including the illustrative hedge charge in the hedged scenario. CFADS does not react to FX, inflation or operations. The shock is applied in every year; results are nominal, not discounted.</p>
   </section>
 
-  <!-- ─────────── controls ─────────── -->
-  <section class="panel">
-    <h2>What you control</h2>
-
-    <div class="ctl">
-      <div class="lab">
-        <span>Simulated depreciation of the XAF</span>
-        <span class="val"><span id="shock-val">20</span> %</span>
-      </div>
-      <input id="shock" type="range" min="0" max="80" step="1" value="20" aria-label="shock">
-      <div class="hint">A 20 % loss of value is a 25 % rise in the rate — not the same number.</div>
-    </div>
-
-    <div class="grid2">
-      <div class="ctl">
-        <div class="lab">
-          <span>Share of debt service hedged</span>
-          <span class="val"><span id="cov-val">50</span> %</span>
-        </div>
-        <input id="cov" type="range" min="0" max="100" step="5" value="50" aria-label="coverage">
-        <div class="hint">0 % = no protection · 100 % = fully locked in advance.</div>
-      </div>
-
-      <div class="ctl">
-        <div class="lab">
-          <span>Cost of the hedge</span>
-          <span class="val"><span id="cost-val">0.00</span> % of covered service</span>
-        </div>
-        <input id="cost" type="range" min="0" max="5" step="0.25" value="0" aria-label="cost">
-        <div class="hint">Zero is a choice you make, not a fact about the market.</div>
-      </div>
-    </div>
-
-    <div class="ctl" style="margin-bottom:0">
-      <div class="lab">
-        <span>Minimum DSCR you would accept</span>
-        <span class="val"><span id="thr-val">1.20</span>x</span>
-      </div>
-      <input id="thr" type="range" min="0.8" max="2.5" step="0.05" value="1.2" aria-label="threshold">
-      <div class="hint">Your covenant assumption: the model does not know your lender's.</div>
-    </div>
-  </section>
-
-  <!-- ─────────── kpis ─────────── -->
-  <section class="panel">
-    <h2>What it does</h2>
-    <div class="kpis">
-      <div class="kpi">
-        <dt>Extra local service</dt>
-        <dd class="bad" id="k-extra">—</dd>
-        <small id="k-extra-sub">XAF over the whole loan</small>
-      </div>
-      <div class="kpi">
-        <dt>Min DSCR unhedged</dt>
-        <dd id="k-dscr-un">—</dd>
-        <small>worst year</small>
-      </div>
-      <div class="kpi">
-        <dt>Min DSCR hedged</dt>
-        <dd id="k-dscr-hg">—</dd>
-        <small id="k-dscr-sub">threshold 1.20x</small>
-      </div>
-      <div class="kpi">
-        <dt>Cost of the hedge</dt>
-        <dd class="warn" id="k-cost">—</dd>
-        <small>XAF, whole loan</small>
-      </div>
-    </div>
-
-    <div style="margin-top:20px">
-      <h2 style="margin-bottom:8px">DSCR year by year</h2>
-      <svg class="chart" id="chart" viewBox="0 0 720 210" role="img"
-           aria-label="Minimum DSCR per year, hedged and unhedged">
-        <g id="chart-inner"></g>
-      </svg>
-      <div class="legend">
-        <span><i class="i-un"></i>unhedged</span>
-        <span><i class="i-hg"></i>hedged</span>
-        <span><i class="i-thr"></i>your threshold</span>
-        <span>· below 1.00x the project does not cover its debt</span>
-      </div>
-    </div>
-
-    <div class="scroll" style="margin-top:14px;max-height:320px;overflow-y:auto">
-      <table id="table">
-        <thead><tr>
-          <th>Year</th><th>Service (EUR)</th><th>Rate</th>
-          <th>Unhedged (XAF)</th><th>Hedged (XAF)</th><th>DSCR un</th><th>DSCR hedged</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- ─────────── limits ─────────── -->
-  <section class="panel">
-    <h2>What this does not say</h2>
-    <div class="warnbox">
-      <strong>Illustrative simulation, not advice.</strong> No probability is attached to
-      any shock; the locked hedge rate is fixed at initial spot and the charge is chosen by you, never quoted; debt amortises
-      in equal slices, cash available is constant; no taxes, reserves, covenant enforcement or
-      construction period. Comparing two scenarios shows a mechanism — not a proven effect.
-    </div>
-  </section>
-
   <section class="panel" id="references">
     <h2>Academic framework — not model validation</h2>
     <p>These selected references motivate the research question. <strong>None validates the numerical calibration, the flat hedge rate or a causal gain from hedging in this prototype.</strong></p>
@@ -169,11 +35,5 @@
     <p class="hint">The carbon panel is withdrawn at this academic stage: no project baseline, additionality assessment or verified emissions dataset supports it. No environmental impact conclusion is made.</p>
   </section>
 
-  <footer>
-    <span>Making Change project contributors</span>
-    <span class="d">no individual is named · no market execution</span>
-  </footer>
-</div>
-<script src="dashboard.js" defer></script>
-</body>
-</html>
+<p>What this does not say: this constructed teaching case is not advice; the stress is a hypothetical break of the parity.</p></details>
+<footer>Making Change · Prototype académique · Aucune donnée d’entreprise réelle · Aucun cours de marché en direct</footer></main></div><script src="dashboard.js" defer></script></body></html>
