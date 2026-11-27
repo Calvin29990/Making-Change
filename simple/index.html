@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Making Change — simple FX dashboard</title>
+<title>Making Change — Academic FX laboratory</title>
 <style>
-  /* One file, no dependency, no build. Dark desk look, mint accent. */
+/* One file, no dependency, no build. White academic interface, restrained teal accent. */
   :root{
-    --bg:#0b0f13; --surface:#121820; --line:#1f2933; --ink:#e8eef4;
-    --soft:#8b9bab; --dim:#5d6b78; --mint:#6ee7b7; --mint-dim:#2f8f6d;
-    --amber:#f2c14e; --red:#ef6b6b; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --bg:#ffffff; --surface:#ffffff; --line:#cbd5e1; --ink:#172b40;
+    --soft:#475569; --dim:#475569; --mint:#08735a; --mint-dim:#438475;
+    --amber:#875600; --red:#b42332; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
@@ -19,7 +19,7 @@
   header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
   h1{font-size:22px;margin:0;letter-spacing:-.01em}
   .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
-    color:var(--amber);border:1px solid #3a2f14;background:#1b1710;padding:2px 7px;border-radius:3px}
+    color:var(--amber);border:1px solid #d7bf8a;background:#fff7e5;padding:2px 7px;border-radius:3px}
   .lede{color:var(--soft);margin:0 0 22px;max-width:640px;font-size:14.5px}
   h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);
     font-weight:600;margin:0 0 12px}
@@ -42,7 +42,7 @@
 
   /* kpis */
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-  .kpi{background:#0e141a;border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+  .kpi{background:#f1f5f9;border:1px solid var(--line);border-radius:6px;padding:12px 14px}
   .kpi dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
     color:var(--dim);margin-bottom:5px}
   .kpi dd{margin:0;font-size:21px;font-weight:600;letter-spacing:-.02em}
@@ -69,9 +69,9 @@
   /* table */
   .scroll{overflow-x:auto}
   table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:11.5px}
-  th,td{padding:6px 9px;text-align:right;border-bottom:1px solid #161e26;white-space:nowrap}
+  th,td{padding:6px 9px;text-align:right;border-bottom:1px solid #dbe2ea;white-space:nowrap}
   thead th{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
-    font-weight:500;background:#0e141a}
+    font-weight:500;background:#f1f5f9}
   tbody th{text-align:left;color:var(--soft);font-weight:400}
   td.ok{color:var(--mint)} td.ko{color:var(--red)}
 
@@ -82,14 +82,14 @@
   .note{border-left:2px solid var(--mint);background:#0d211b;color:#b8d5c8;
     padding:10px 12px;border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;margin-top:14px}
   .note strong{color:var(--mint)}
-  .warnbox{border-left:2px solid var(--amber);background:#14110a;color:#d8cba8;
+  .warnbox{border-left:2px solid var(--amber);background:#fff8e8;color:#634b17;
     padding:10px 12px;border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;margin-top:14px}
   .warnbox strong{color:var(--amber)}
 
   /* sim toggle */
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;
     margin-bottom:14px}
-  .seg button{background:#0e141a;color:var(--soft);border:0;padding:6px 11px;
+  .seg button{background:#f1f5f9;color:var(--soft);border:0;padding:6px 11px;
     font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;cursor:pointer}
   .seg button.on{background:#1d5745;color:var(--mint)}
   .seg button+button{border-left:1px solid var(--line)}
@@ -100,6 +100,13 @@
     display:flex;gap:16px;flex-wrap:wrap}
   footer .d{color:var(--amber)}
   @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+
+a{color:#165a9f;text-underline-offset:3px} a:focus-visible,input:focus-visible{outline:3px solid #165a9f;outline-offset:4px}
+.panel p,.panel li{font-size:14px} li{margin-bottom:10px}
+[aria-label="Assumption register"] td{white-space:normal;text-align:left;font-family:system-ui,sans-serif}
+[aria-label="Assumption register"] th{text-align:left;white-space:normal}
+@media print{body{padding:0}.panel{break-inside:avoid}input{display:none}}
+
 </style>
 </head>
 <body>
@@ -107,19 +114,19 @@
 
   <header>
     <h1>Making Change</h1>
-    <span class="tag">simple dashboard</span>
+    <span class="tag">academic prototype</span>
   </header>
   <p class="lede">
     A project that earns in a local currency and borrows in a hard currency owes
-    more local currency when its money loses value. Move the two sliders and see
+    more local currency when its money loses value. Adjust the assumptions and see
     what it does to the debt — then what a hedge does, and what it costs.
   </p>
 
   <!-- ─────────── the case ─────────── -->
   <section class="panel">
-    <h2>The case</h2>
+    <h2>Classical teaching case · infrastructure SPV</h2>
     <div class="kpis" style="margin-bottom:16px">
-      <div class="kpi"><dt>Project</dt><dd style="font-size:15px">CEMAC infrastructure loan</dd><small>Central Africa</small></div>
+      <div class="kpi"><dt>Project</dt><dd style="font-size:15px">Fictional infrastructure SPV</dd><small>CEMAC setting · not an observed company</small></div>
       <div class="kpi"><dt>Debt</dt><dd style="font-size:15px">10,000,000 EUR</dd><small id="c-mat">15 years · 5.0 %</small></div>
       <div class="kpi"><dt>Revenue currency</dt><dd style="font-size:15px">XAF</dd><small>pegged to the euro</small></div>
       <div class="kpi"><dt>Rate at start</dt><dd style="font-size:15px">655.957</dd><small>XAF per 1 EUR</small></div>
@@ -129,6 +136,22 @@
       shock below is not an ordinary fluctuation — it is a <b>hypothetical break of
       the parity</b>, an institutional event. The page labels it that way on purpose.
     </p>
+  </section>
+
+  <section class="panel" aria-labelledby="assumptions-title">
+    <h2 id="assumptions-title">Assumptions and provenance</h2>
+    <p>This is a <strong>constructed teaching case</strong>, not a published business-school case or an empirical company study. No real company is assigned invented financial data.</p>
+    <table aria-label="Assumption register"><thead><tr><th>Parameter</th><th>Assumption / status</th></tr></thead><tbody>
+      <tr><th>Loan</th><td>EUR 10 million · 15 years · 5% fixed interest: illustrative choices</td></tr>
+      <tr><th>CFADS</th><td>XAF 850 million/year, constant: illustrative, not revenue</td></tr>
+      <tr><th>Amortisation</th><td>Equal annual principal; interest on opening balance</td></tr>
+      <tr><th>FX stress</th><td>Immediate, permanent parity break; no probability assigned</td></tr>
+      <tr><th>Hedge</th><td>Constant share of each annual payment, locked at 655.957 XAF/EUR</td></tr>
+      <tr><th>Hedge charge</th><td>Applied to covered annual debt service converted at the locked rate</td></tr>
+      <tr><th>DSCR threshold</th><td>1.20x starting assumption, not a documented lender covenant</td></tr>
+    </tbody></table>
+    <p class="hint">The locked rate equals initial spot by construction. It is not an observed forward quote: interest differentials, tenor, liquidity, counterparty risk, collateral and hedge availability are not modelled. Even a positive charge does not make this a market-priced forward.</p>
+    <p class="hint">DSCR = annual cash flow available for debt service (CFADS) / annual debt service in XAF, including the illustrative hedge charge in the hedged scenario. CFADS does not react to FX, inflation or operations. The shock is applied in every year; results are nominal, not discounted.</p>
   </section>
 
   <!-- ─────────── controls ─────────── -->
@@ -157,7 +180,7 @@
       <div class="ctl">
         <div class="lab">
           <span>Cost of the hedge</span>
-          <span class="val"><span id="cost-val">0.00</span> %/yr</span>
+          <span class="val"><span id="cost-val">0.00</span> % of covered service</span>
         </div>
         <input id="cost" type="range" min="0" max="5" step="0.25" value="0" aria-label="cost">
         <div class="hint">Zero is a choice you make, not a fact about the market.</div>
@@ -225,53 +248,28 @@
     </div>
   </section>
 
-  <!-- ─────────── green ─────────── -->
-  <section class="panel green">
-    <h2>The same debt, in carbon terms</h2>
-    <div class="ctl">
-      <div class="lab">
-        <span>Avoided CO₂e per year</span>
-        <span class="val"><span id="co2-val">12,000</span> tCO₂e</span>
-      </div>
-      <input id="co2" type="range" min="0" max="60000" step="1000" value="12000" aria-label="co2e">
-      <div class="hint">An assumption about the asset — grid or water project. Not a measurement.</div>
-    </div>
-
-    <div class="kpis">
-      <div class="kpi">
-        <dt>Debt service per tCO₂e</dt>
-        <dd id="g-service">—</dd>
-        <small>XAF, life of loan</small>
-      </div>
-      <div class="kpi">
-        <dt>Added by the shock</dt>
-        <dd class="warn" id="g-shock">—</dd>
-        <small>per tCO₂e, exchange rate only</small>
-      </div>
-      <div class="kpi">
-        <dt>Brought back by the hedge</dt>
-        <dd class="good" id="g-hedge">—</dd>
-        <small>per tCO₂e, net of cost</small>
-      </div>
-    </div>
-
-    <div class="note">
-      <strong>What this does not say.</strong> Not that hedging makes a project greener,
-      nor that a financial cost is an environmental one. Only this: a currency shock takes
-      local cash that could have serviced the same asset, so the cost of avoided carbon
-      rises with the exchange rate.
+  <!-- ─────────── limits ─────────── -->
+  <section class="panel">
+    <h2>What this does not say</h2>
+    <div class="warnbox">
+      <strong>Illustrative simulation, not advice.</strong> No probability is attached to
+      any shock; the locked hedge rate is fixed at initial spot and the charge is chosen by you, never quoted; debt amortises
+      in equal slices, cash available is constant; no taxes, reserves, covenant enforcement or
+      construction period. Comparing two scenarios shows a mechanism — not a proven effect.
     </div>
   </section>
 
-  <!-- ─────────── limits ─────────── -->
-  <section class="panel">
-    <h2>What this is not</h2>
-    <div class="warnbox">
-      <strong>Illustrative simulation, not advice.</strong> No probability is attached to
-      any shock; the hedge price and its cost are typed by you, never quoted; debt amortises
-      in equal slices, cash available is constant; no taxes, reserves, covenants or
-      construction period. Comparing two scenarios shows a mechanism — not a proven effect.
-    </div>
+  <section class="panel" id="references">
+    <h2>Academic framework — not model validation</h2>
+    <p>These selected references motivate the research question. <strong>None validates the numerical calibration, the flat hedge rate or a causal gain from hedging in this prototype.</strong></p>
+    <ul>
+      <li><a href="https://doi.org/10.2307/3665446">Adler &amp; Dumas (1984), Exposure to Currency Risk</a>: economic exposure is broader than the contractual debt-service exposure isolated here.</li>
+      <li><a href="https://doi.org/10.1111/j.1540-6261.1993.tb05123.x">Froot, Scharfstein &amp; Stein (1993), Risk Management</a>: financing frictions motivate hedging; investment and financing decisions are not endogenous in this model.</li>
+      <li><a href="https://doi.org/10.1111/j.1745-6622.2000.tb00043.x">Kleimeier &amp; Megginson (2000), Project Finance Loans</a>: project-finance context, not a source for this loan's parameters.</li>
+      <li><a href="https://doi.org/10.1093/rfs/14.1.243">Allayannis &amp; Weston (2001)</a>: association in US non-financial firms, not causal evidence for an African infrastructure SPV.</li>
+    </ul>
+    <p><a href="../docs/REFERENCES-ACADEMIQUES.md">Full reference register and limitations</a> · <a href="../docs/AUDIT-ACADEMIQUE.md">Audit and release scope</a></p>
+    <p class="hint">The carbon panel is withdrawn at this academic stage: no project baseline, additionality assessment or verified emissions dataset supports it. No environmental impact conclusion is made.</p>
   </section>
 
   <footer>
@@ -279,7 +277,6 @@
     <span class="d">no individual is named · no market execution</span>
   </footer>
 </div>
-
 <script>
 "use strict";
 
@@ -330,8 +327,7 @@ function readInputs() {
     shock: +el("shock").value / 100,
     coverage: +el("cov").value / 100,
     cost: +el("cost").value / 100,
-    threshold: +el("thr").value,
-    co2: +el("co2").value
+    threshold: +el("thr").value
   };
 }
 
@@ -351,7 +347,6 @@ function render() {
   el("cov-val").textContent = Math.round(i.coverage * 100);
   el("cost-val").textContent = (i.cost * 100).toFixed(2);
   el("thr-val").textContent = i.threshold.toFixed(2);
-  el("co2-val").textContent = fmt(i.co2);
   document.querySelectorAll("input[type=range]").forEach(paintRange);
 
   // engine: the explicit hedge is the forward rate at spot (a flat forward,
@@ -390,12 +385,7 @@ function render() {
       <td class="${r.dscrHg < i.threshold ? "ko" : "ok"}">${r.dscrHg.toFixed(2)}</td>
     </tr>`).join("");
 
-  // green
-  const totalCo2 = i.co2 * CASE.years;
-  el("g-service").textContent = totalCo2 ? fmt(serviceUn / totalCo2) : "—";
-  el("g-shock").textContent = totalCo2 ? fmt(extra / totalCo2) : "—";
-  const saving = Math.max(serviceUn - serviceHg, 0);
-  el("g-hedge").textContent = totalCo2 ? fmt(saving / totalCo2) : "—";
+
 }
 
 /* SVG chart, hand-drawn: two bars per year, plus the threshold line. */
@@ -432,13 +422,14 @@ function drawChart(rows, threshold) {
 }
 
 /* wire the sliders */
-["shock", "cov", "cost", "thr", "co2"].forEach(id => {
+["shock", "cov", "cost", "thr"].forEach(id => {
   el(id).addEventListener("input", render);
 });
 render();
 
 /* expose the engine for a one-line check in the console or from Node */
 if (typeof window !== "undefined") window.mcSimulate = simulate;
+
 </script>
 </body>
 </html>
