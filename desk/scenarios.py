@@ -7,6 +7,7 @@ depreciation is a *hypothetical parity break*, not an ordinary market move.
 No market data, no live quote. Every number here is a didactic assumption the
 user can override, and every scenario declares where it comes from.
 """
+import time
 from dataclasses import dataclass
 
 
@@ -168,6 +169,9 @@ SCENARIOS = {
 }
 
 DEFAULT_SCENARIO = "xaf-peg-infra"
+
+#: date the illustrative assumptions were set; used when a rate is an assumption
+SCENARIO_DATE_TS = time.mktime(time.strptime("2026-11-27", "%Y-%m-%d"))
 
 
 #: five preset shocks, plus 'custom'

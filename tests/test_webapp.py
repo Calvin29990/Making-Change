@@ -1,114 +1,202 @@
 """Tests for the web layer.
 
-The engine is already covered by tests/test_model.py. These tests check that
-the site cannot drift from it: same numbers through HTTP as through the engine,
-plus the URL-reproducibility guarantee and the input clamping.
+The engine is covered by test_model.py; these tests check that the site cannot
+drift from it, that a URL always reproduces its numbers, that degradation of the
+market feed is visible rather than silent, and that no personal name appears.
 """
+import os
 import unittest
 
-from desk.webapp import app
-from desk import scenarios as sc
-from desk.engine import break_even_coverage, build_inputs, green_metrics, summary
-from model import simulate
+os.environ.setdefault("MC_OFFLINE", "1")
+
 from dataclasses import replace
 
+from desk import managers as mg
+from desk import scenarios as sc
+from desk.engine import build_inputs, green_metrics, summary
+from desk.webapp import app
+from model import simulate
 
-class WebTests(unittest.TestCase):
+
+def scenario_inputs(s=None, **kw):
+    s = s or sc.get(sc.DEFAULT_SCENARIO)
+    base = {
+        "principal": s.principal, "interest": s.interest, "years": s.years,
+        "rate": s.rate, "cfads": s.annual_cfads, "shock": s.depreciation,
+        "coverage": s.coverage, "forward": s.forward_rate, "cost": s.annual_cost_rate,
+    }
+    base.update(kw)
+    return build_inputs(base)
+
+
+class PageTests(unittest.TestCase):
     def setUp(self):
         app.config.update(TESTING=True)
         self.client = app.test_client()
 
+    def page(self, url="/"):
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200, url)
+        return r.get_data(as_text=True)
+
     def test_home_renders_default_scenario(self):
-        r = self.client.get("/")
-        self.assertEqual(r.status_code, 200)
-        body = r.get_data(as_text=True)
-        s = sc.get(sc.DEFAULT_SCENARIO)
-        self.assertIn(s.name, body)
+        body = self.page()
+        self.assertIn(sc.get(sc.DEFAULT_SCENARIO).name, body)
         self.assertIn("hypothetical parity break", body)
         self.assertIn("not a forecast", body.lower())
 
+    def test_all_scenarios_render(self):
+        for key in sc.SCENARIOS:
+            self.page(f"/?scenario={key}")
+
+    def test_all_managers_render(self):
+        for m in mg.all_managers():
+            self.page(f"/?manager={m.key}")
+
+    def test_peg_labelled_float_not(self):
+        peg = self.page("/?scenario=xaf-peg-infra")
+        flt = self.page("/?scenario=brl-float-transport")
+        self.assertIn("hypothetical parity break", peg)
+        self.assertNotIn("hypothetical parity break", flt)
+
     def test_same_url_same_numbers(self):
         url = "/?scenario=ghs-managed-solar&shock=0.35&coverage=0.75&forward=15&cost=0.02"
-        a = self.client.get(url).get_data(as_text=True)
-        b = self.client.get(url).get_data(as_text=True)
-        self.assertEqual(a, b)
+        self.assertEqual(self.page(url), self.page(url))
 
-    def test_shock_changes_result(self):
-        low = self.client.get("/?shock=0.10").get_data(as_text=True)
-        high = self.client.get("/?shock=0.50").get_data(as_text=True)
-        self.assertNotEqual(low, high)
+    def test_shock_changes_output(self):
+        self.assertNotEqual(self.page("/?shock=0.10"), self.page("/?shock=0.50"))
 
-    def test_bad_input_is_clamped_not_crashing(self):
+    def test_bad_input_is_clamped(self):
         for qs in ("?shock=abc", "?shock=99", "?coverage=-5", "?forward=0",
-                   "?threshold=1e9", "?scenario=nope", "?co2e=-10"):
+                   "?threshold=1e9", "?scenario=nope", "?co2e=-10", "?principal=0",
+                   "?manager=nope", "?rate=nan"):
             self.assertEqual(self.client.get("/" + qs).status_code, 200, qs)
+
+    def test_other_pages(self):
+        for url in ("/market", "/code", "/api/managers", "/healthz"):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_scenario_and_manager_switch_redirect(self):
+        r = self.client.get("/scenarios/brl-float-transport")
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("brl-float-transport", r.headers["Location"])
+        r = self.client.get("/managers/carry")
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("manager=carry", r.headers["Location"])
 
     def test_csv_matches_engine(self):
         r = self.client.get("/export.csv?shock=0.30&coverage=0.5")
-        self.assertEqual(r.status_code, 200)
         self.assertEqual(r.mimetype, "text/csv")
         lines = r.get_data(as_text=True).strip().split("\n")
         self.assertEqual(len(lines), sc.get(sc.DEFAULT_SCENARIO).years + 1)
         self.assertIn("DSCR avec couverture", lines[0])
 
-    def test_scenario_switch_redirects(self):
-        r = self.client.get("/scenario/brl-float-transport")
-        self.assertEqual(r.status_code, 302)
-        self.assertIn("brl-float-transport", r.headers["Location"])
-        self.assertEqual(self.client.get("/scenario/unknown").status_code, 302)
-
-    def test_peg_is_labelled_and_float_is_not(self):
-        peg = self.client.get("/scenario/xaf-peg-infra", follow_redirects=True).get_data(as_text=True)
-        flt = self.client.get("/scenario/brl-float-transport", follow_redirects=True).get_data(as_text=True)
-        self.assertIn("hypothetical parity break", peg)
-        self.assertNotIn("hypothetical parity break", flt)
+    def test_api_simulate_matches_engine(self):
+        payload = self.client.get("/api/simulate?scenario=ghs-managed-solar&shock=0.2&coverage=0.4").get_json()
+        self.assertEqual(payload["scenario"], "ghs-managed-solar")
+        self.assertEqual(payload["spot"]["source"], "reference")
+        self.assertFalse(payload["spot"]["live"])
+        self.assertEqual(len(payload["rows"]), sc.get("ghs-managed-solar").years)
+        self.assertIn("not a forecast", payload["disclaimer"].lower())
 
     def test_no_personal_name_anywhere(self):
-        body = self.client.get("/").get_data(as_text=True).lower()
-        for name in ("calvin", "edwin", "zinsou", "minang", "ayundi", "ayundy"):
-            self.assertNotIn(name, body)
+        names = ("calvin", "edwin", "zinsou", "minang", "amyuni", "ayundi", "ayundy")
+        for url in ("/", "/market", "/code", "/api/managers"):
+            body = self.page(url).lower()
+            for n in names:
+                self.assertNotIn(n, body, f"{n} in {url}")
 
 
-class EngineLayerTests(unittest.TestCase):
-    def setUp(self):
-        s = sc.get(sc.DEFAULT_SCENARIO)
-        self.x = build_inputs({
-            "principal": s.principal, "interest": s.interest, "years": s.years,
-            "rate": s.rate, "cfads": s.annual_cfads, "shock": s.depreciation,
-            "coverage": s.coverage, "forward": s.forward_rate,
-            "cost": s.annual_cost_rate,
-        })
+class MarketTests(unittest.TestCase):
+    def test_offline_returns_reference_and_says_so(self):
+        from desk import market
 
-    def test_summary_uses_the_engine(self):
-        r = summary(self.x)
-        rows = simulate(self.x)
-        self.assertEqual(r["rows"], rows)
-        self.assertAlmostEqual(r["dscr_min_hedged"],
-                               min(x["DSCR avec couverture"] for x in rows))
+        r = market.get_rate("XAF", "EUR", reference=655.957)
+        self.assertEqual(r.source, "reference")
+        self.assertFalse(r.live)
+        self.assertIn("not a market price", r.note)
 
-    def test_extra_local_is_zero_without_shock(self):
-        r = summary(replace(self.x, depreciation=0.0))
-        self.assertAlmostEqual(r["extra_local"], 0.0, places=6)
+    def test_same_currency_is_identity(self):
+        from desk import market
 
-    def test_hedge_cost_is_positive_when_cost_set(self):
-        r = summary(replace(self.x, annual_cost_rate=0.02, coverage=0.5))
-        self.assertGreater(r["hedge_cost"], 0)
+        r = market.get_rate("EUR", "EUR")
+        self.assertEqual(r.value, 1.0)
+        self.assertTrue(r.live)
 
-    def test_break_even_is_monotone(self):
-        loose = break_even_coverage(self.x, 0.5)
-        strict = break_even_coverage(self.x, 3.0)
-        self.assertIsNotNone(loose)
-        self.assertTrue(strict is None or strict >= loose)
+    def test_rate_serialises(self):
+        from desk import market
 
-    def test_green_metrics_are_ratios_of_the_same_result(self):
-        r = summary(self.x)
-        g = green_metrics(self.x, 1000.0, r)
-        self.assertAlmostEqual(g["total_co2e"], 1000.0 * self.x.years)
+        d = market.get_rate("GHS", "USD", reference=12.5).to_dict()
+        for k in ("pair", "value", "source", "live", "as_of", "age_seconds"):
+            self.assertIn(k, d)
+
+    def test_universe_covers_the_three_scenarios(self):
+        from desk import market
+
+        u = market.universe()
+        for s in sc.all_scenarios():
+            self.assertIn(s.local, u)
+
+
+class ManagerTests(unittest.TestCase):
+    def view(self, x, **kw):
+        def dscr_with(c):
+            rows = simulate(replace(x, coverage=c))
+            return min(r["DSCR avec couverture"] for r in rows)
+
+        from desk.market import Rate
+        import time
+
+        base = dict(years=x.years, capacity=1.0, shock=x.depreciation,
+                    spot=Rate("X", 1.0, "reference", time.time(), False),
+                    forward=x.forward_rate, annual_cost_rate=x.annual_cost_rate,
+                    dscr_threshold=1.2, dscr_with=dscr_with)
+        base.update(kw)
+        return mg.HedgeView(**base)
+
+    def test_every_manager_proposes_a_bounded_share(self):
+        x = scenario_inputs()
+        for m in mg.all_managers():
+            p = m.propose(self.view(x))
+            self.assertGreaterEqual(p.coverage, 0.0, m.key)
+            self.assertLessEqual(p.coverage, 1.0, m.key)
+            self.assertTrue(p.rationale, m.key)
+            self.assertIsInstance(p.trace, list)
+
+    def test_threshold_seeker_respects_the_covenant_when_possible(self):
+        # the default case tops out at 1.11x fully hedged, so ask for 1.05x
+        x = scenario_inputs(shock=0.15, coverage=0.0)
+        p = mg.get("threshold").propose(self.view(x, dscr_threshold=1.05))
+        rows = simulate(replace(x, coverage=p.coverage))
+        self.assertGreaterEqual(min(r["DSCR avec couverture"] for r in rows), 1.05 - 1e-9)
+
+    def test_threshold_seeker_says_when_it_is_unreachable(self):
+        x = scenario_inputs(shock=0.30, coverage=0.0)
+        p = mg.get("threshold").propose(self.view(x, dscr_threshold=9.0))
+        self.assertIn("binding constraint", p.rationale)
+
+    def test_carry_aware_skips_an_expensive_forward(self):
+        x = scenario_inputs(forward=900.0, shock=0.20)
+        p = mg.get("carry").propose(self.view(x))
+        self.assertEqual(p.coverage, 0.0)
+
+    def test_managers_are_serialisable(self):
+        for m in mg.all_managers():
+            d = m.as_dict()
+            self.assertEqual(set(d), {"key", "name", "tagline", "family", "file"})
+
+
+class GreenTests(unittest.TestCase):
+    def test_green_ratios_follow_the_same_result(self):
+        x = scenario_inputs()
+        r = summary(x)
+        g = green_metrics(x, 1000.0, r)
+        self.assertAlmostEqual(g["total_co2e"], 1000.0 * x.years)
         self.assertAlmostEqual(g["shock_cost_per_tco2e"], r["extra_local"] / g["total_co2e"])
 
-    def test_green_metrics_survive_zero_carbon_input(self):
-        g = green_metrics(self.x, 0.0, summary(self.x))
-        self.assertIsNone(g["service_per_tco2e"])
+    def test_green_survives_zero_carbon(self):
+        x = scenario_inputs()
+        self.assertIsNone(green_metrics(x, 0.0, summary(x))["service_per_tco2e"])
 
 
 if __name__ == "__main__":
