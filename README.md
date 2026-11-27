@@ -40,6 +40,34 @@ python -m unittest discover -s tests -v
 
 ---
 
+## Start here: the one-file dashboard
+
+`simple/index.html` is the entry point. One file, no dependency, no server, no
+install, no Internet: open it in a browser and it works.
+
+```bash
+xdg-open simple/index.html      # macOS: open / Windows: double-click
+```
+
+It contains, in this order: the case, five sliders (shock, hedged share, cost of
+cover, covenant, avoided CO2e), four KPI cards, a DSCR chart year by year, the
+annual table, and the carbon reading. About 500 lines of HTML, CSS and vanilla
+JavaScript, with the model in **20 readable lines** at the top of the script.
+
+Two guarantees:
+
+- **The numbers are tested.** `tests/test_simple.py` extracts the page's own
+  JavaScript, runs it under node, and compares every row against `model.py`; it
+  also executes `render()` against a DOM stub so a typo cannot ship silently.
+- **The origin is visible.** Served from a static host it is a live page; opened
+  from disk it is the same page. Nothing is fetched, so nothing can fail quietly.
+
+The Flask desk described below is the fuller version (managers, live FX feed,
+JSON API). Keep it for later: the single file is what a jury, a classmate, or a
+treasurer can actually open.
+
+---
+
 ## The web desk (main interface)
 
 A Flask site whose design follows **ShockDesk**: dark surface, mint accent,
@@ -126,7 +154,8 @@ parallel.
 Making-Change/
 ├── app.py                          # Legacy Streamlit interface (kept for reference)
 ├── model.py                        # Pure calculation engine (Inputs, simulate)
-├── desk/                           # Flask web desk — the main interface
+├── simple/index.html               # ← one-file dashboard, start here
+├── desk/                           # Flask desk — fuller version
 │   ├── webapp.py                   # routes, URL state, CSV + JSON export
 │   ├── engine.py                   # orchestration over model.py (no formulas)
 │   ├── scenarios.py                # dated scenarios + exchange-rate regimes
@@ -140,7 +169,8 @@ Making-Change/
 ├── UTILISATION-IA.md               # AI transparency log & SKEMA anti-plagiarism compliance
 ├── tests/
 │   ├── test_model.py               # Engine unit tests
-│   └── test_webapp.py              # Routes, managers, market fallback, green
+│   ├── test_webapp.py              # Routes, managers, market fallback, green
+│   └── test_simple.py              # HTML/JS parity with model.py
 ├── docs/
 │   ├── METHODOLOGIE.md             # Formulas, FX conventions, and model limitations
 │   ├── SOURCES-ACADEMIQUES.md      # Prototype academic framing notes
