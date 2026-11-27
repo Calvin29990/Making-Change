@@ -35,8 +35,8 @@ function simulate(shock, coverage, costRate, forward) {
 }
 
 /* ───────────────────────── formatting ───────────────────────── */
-const fmt = (n, d) => n.toLocaleString("en-US", {minimumFractionDigits: d || 0, maximumFractionDigits: d || 0});
-const millions = n => (n / 1e6).toLocaleString("en-US", {maximumFractionDigits: 0}) + " M";
+const fmt = (n, d) => n.toLocaleString("fr-FR", {minimumFractionDigits: d || 0, maximumFractionDigits: d || 0});
+const millions = n => (n / 1e6).toLocaleString("fr-FR", {maximumFractionDigits: 0}) + " M";
 const dscr = n => n.toFixed(2) + "x";
 
 /* ───────────────────────── render ───────────────────────── */
@@ -87,11 +87,12 @@ function render() {
   el("k-dscr-un").className = minUn < i.threshold ? "bad" : "good";
   el("k-dscr-hg").textContent = dscr(minHg);
   el("k-dscr-hg").className = minHg < i.threshold ? "bad" : "good";
-  el("k-dscr-sub").textContent = "threshold " + i.threshold.toFixed(2) + "x";
+  el("k-dscr-sub").textContent = "Seuil choisi : " + i.threshold.toFixed(2) + "×";
   el("k-cost").textContent = cost > 0 ? millions(cost) : "0";
   el("k-cost").className = cost > 0 ? "warn" : "mute";
 
   drawChart(rows, i.threshold);
+  drawOtherCharts(rows,i,noShock,serviceUn,serviceHg,cost);
 
   // table
   el("table").querySelector("tbody").innerHTML = rows.map(r => `
@@ -108,44 +109,62 @@ function render() {
 
 }
 
-/* SVG chart, hand-drawn: two bars per year, plus the threshold line. */
+/* Four linked SVG visuals; no external runtime or market feed. */
+const BLUE = '#3875cd', TEAL = '#008575', AMBER = '#9b6900';
+function axes(max, suffix, ticks) {
+  let s = '';
+  for (let k = 0; k <= 4; k++) {
+    const v = max * k / 4, y = 190 - k * 39;
+    s += `<line class="gl" x1="48" x2="580" y1="${y}" y2="${y}"/><text x="2" y="${y+4}">${v.toFixed(suffix==='×'?1:0)}${suffix}</text>`;
+  }
+  ticks.forEach(([x,label]) => s += `<text text-anchor="middle" x="${x}" y="211">${label}</text>`);
+  return s;
+}
+function poly(values, max, color, title) {
+  const points = values.map((v,k) => [48+k*532/(values.length-1),190-v/max*156]);
+  return `<polyline fill="none" stroke="${color}" stroke-width="2.5" points="${points.map(p=>p.join(',')).join(' ')}"/>` + points.map(([x,y],k)=>`<circle cx="${x}" cy="${y}" r="3" fill="${color}" tabindex="0"><title>${title(k,values[k])}</title></circle>`).join('');
+}
+function thresholdLine(threshold,max) {
+  const y=190-threshold/max*156;
+  return `<line class="thr" x1="48" x2="580" y1="${y}" y2="${y}"/><text x="490" y="${y-6}">Seuil ${threshold.toFixed(2)}×</text>`;
+}
 function drawChart(rows, threshold) {
-  const W = 720, H = 210, left = 40, base = 172, h = 148;
-  const slot = (W - left - 14) / rows.length;
-  const values = rows.flatMap(r => [r.dscrUn, r.dscrHg]);
-  const max = Math.max(...values, threshold) * 1.2;
-
-  let s = "";
-  [0, .25, .5, .75, 1].forEach(f => {
-    const y = base - f * h;
-    s += `<line class="gl" x1="${left}" x2="${W - 10}" y1="${y}" y2="${y}"/>`;
-    s += `<text class="yl" x="0" y="${y + 3}">${(f * max).toFixed(2)}x</text>`;
+  const max = Math.max(threshold,...rows.flatMap(r=>[r.dscrUn,r.dscrHg]))*1.15;
+  let s=axes(max,'×',[1,5,10,15].map(n=>[48+(n-1)*532/14,'An '+n]));
+  s+=thresholdLine(threshold,max);
+  s+=poly(rows.map(r=>r.dscrUn),max,BLUE,(k,v)=>`Année ${k+1}, sans protection : ${v.toFixed(2)}×`);
+  s+=poly(rows.map(r=>r.dscrHg),max,TEAL,(k,v)=>`Année ${k+1}, avec protection : ${v.toFixed(2)}×`);
+  el('chart-inner').innerHTML=s;
+}
+function drawOtherCharts(rows,i,noShock,serviceUn,serviceHg,cost) {
+  const max=Math.max(...rows.flatMap(r=>[r.uncovered,r.hedged]))/1e6*1.15;
+  let s=axes(max,'',[1,5,10,15].map(n=>[60+(n-1)*35,'An '+n]));
+  rows.forEach((r,k)=>{
+    [r.uncovered,r.hedged].forEach((v,j)=>{const h=v/1e6/max*156;s+=`<rect x="${49+k*35+j*13}" y="${190-h}" width="11" height="${h}" fill="${j?TEAL:BLUE}" tabindex="0"><title>Année ${r.year}, ${j?'avec':'sans'} protection : ${fmt(v)} XAF</title></rect>`;});
   });
-
-  const yThr = base - (threshold / max) * h;
-  s += `<line class="thr" x1="${left}" x2="${W - 10}" y1="${yThr}" y2="${yThr}"/>`;
-  s += `<text class="tlab" x="${left + 4}" y="${yThr - 4}">threshold ${threshold.toFixed(2)}x</text>`;
-
-  rows.forEach((r, idx) => {
-    const x = left + 4 + idx * slot;
-    const bw = Math.max(slot * 0.32, 5);
-    const yUn = base - (r.dscrUn / max) * h;
-    const yHg = base - (r.dscrHg / max) * h;
-    s += `<rect class="un" x="${x}" y="${yUn}" width="${bw}" height="${base - yUn}"/>`;
-    s += `<rect class="hg ${r.dscrHg >= threshold ? "hot" : ""}" x="${x + bw + 1}" y="${yHg}" width="${bw}" height="${base - yHg}"/>`;
-    if (idx === 0 || idx === rows.length - 1 || (idx + 1) % 3 === 0) {
-      s += `<text class="xl" x="${x + bw}" y="${base + 14}">${r.year}</text>`;
-    }
-  });
-  s += `<line class="gl" x1="${left}" x2="${W - 10}" y1="${base}" y2="${base}"/>`;
-  el("chart-inner").innerHTML = s;
+  el('service-chart').innerHTML=s;
+  // True cumulative waterfall: baseline + FX shock - gross protection + fee = hedged total.
+  const gross=serviceUn-serviceHg+cost;
+  const steps=[['Sans choc',0,noShock,BLUE],['Choc FX',noShock,serviceUn,'#c99338'],['Protection',serviceUn,serviceUn-gross,TEAL],['Frais',serviceUn-gross,serviceHg,'#bc7e45'],['Total protégé',0,serviceHg,TEAL]];
+  const wm=Math.max(serviceUn,serviceHg,noShock)/1e6*1.2;
+  s=axes(wm,'',steps.map((r,k)=>[98+k*105,r[0]]));
+  steps.forEach(([label,a,b,color],k)=>{const x=65+k*105,y=190-Math.max(a,b)/1e6/wm*156,h=Math.abs(b-a)/1e6/wm*156; s+=`<rect x="${x}" y="${y}" width="65" height="${Math.max(h,1)}" fill="${color}" tabindex="0"><title>${label} : ${fmt(b-a)} XAF</title></rect><text text-anchor="middle" x="${x+32}" y="${y-6}">${b-a>0?'+':''}${fmt((b-a)/1e6)}</text>`;
+  });el('bridge-chart').innerHTML=s;
+  const shocks=Array.from({length:17},(_,k)=>k*.05);
+  const series=shocks.map(d=>{const rr=simulate(d,i.coverage,i.cost,CASE.rate);return [Math.min(...rr.map(r=>r.dscrUn)),Math.min(...rr.map(r=>r.dscrHg))];});
+  const sm=Math.max(i.threshold,...series.flat())*1.15;
+  s=axes(sm,'×',[0,20,40,60,80].map(v=>[48+v/80*532,v+' %']));
+  s+=thresholdLine(i.threshold,sm);
+  [0,1].forEach(j=>s+=poly(series.map(r=>r[j]),sm,j?TEAL:BLUE,(k,v)=>`Choc ${k*5} %, ${j?'avec':'sans'} protection : ${v.toFixed(2)}×`));
+  const current=rows[0];[current.dscrUn,current.dscrHg].forEach((v,j)=>s+=`<circle cx="${48+i.shock/.8*532}" cy="${190-v/sm*156}" r="5" fill="${j?TEAL:BLUE}" stroke="white" stroke-width="2"><title>Choix actuel : ${v.toFixed(2)}×</title></circle>`);
+  el('sensitivity-chart').innerHTML=s;
+  const min=Math.min(...rows.map(r=>r.dscrHg));
+  const status=min<1?'La trésorerie reste insuffisante pour rembourser.':min<i.threshold?'Le projet rembourse, mais reste sous votre seuil de sécurité.':'Le projet atteint votre seuil de sécurité.';
+  el('insight').textContent=`${status} Écart net de la protection : ${fmt((serviceUn-serviceHg)/1e6,1)} M XAF ${serviceUn>=serviceHg?'économisés':'de surcoût (valeur négative)'} sur 15 ans.`;
 }
 
 /* wire the sliders */
-["shock", "cov", "cost", "thr"].forEach(id => {
-  el(id).addEventListener("input", render);
-});
+['shock','cov','cost','thr'].forEach(id=>el(id).addEventListener('input',render));
+el('reset').addEventListener('click',()=>{['shock','cov','cost','thr'].forEach((id,k)=>el(id).value=[20,50,0,1.2][k]);render();});
 render();
-
-/* expose the engine for a one-line check in the console or from Node */
-if (typeof window !== "undefined") window.mcSimulate = simulate;
+if (typeof window !== 'undefined') window.mcSimulate=simulate;

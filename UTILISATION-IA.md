@@ -32,6 +32,8 @@ In accordance with **SKEMA Business School** academic integrity and anti-plagiar
 
 ---
 
+| 2026-11-27 | Interactive dashboard redesign | User requested a simpler Power BI-style white dashboard with four distinct charts. | Reorganized Pages into French KPI cards, sidebar controls, DSCR lines, annual service bars, cumulative cost waterfall and shock sensitivity. Kept academic disclosures collapsible and synchronized standalone HTML. | Contributors review readability and scientific scope before deployment. |
+
 ## 3. Update Rule
 
 Any new AI-assisted work session (code additions, documentation drafting, bibliographic research) must add a row to the table above before pushing to the main branch.
