@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+{% block title %}{{ s.name }} — Making Change desk{% endblock %}
+
+{% block controlbar %}
+<form class="controlbar" method="get" action="{{ url_for('desk') }}">
+  <label class="ctl">
+    <span>scenario</span>
+    <select name="scenario" onchange="this.form.submit()">
+      {% for s2 in scenarios %}
+        <option value="{{ s2.key }}" {{ 'selected' if s2.key == s.key }}>
+          {{ s2.name }} — {{ s2.local }}/{{ s2.foreign }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label class="ctl">
+    <span>hedge manager</span>
+    <select name="manager" onchange="this.form.submit()">
+      {% for m in managers %}
+        <option value="{{ m.key }}" {{ 'selected' if m.key == manager.key }}>
+          {{ m.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label class="ctl grow">
+    <span>debt ({{ s.foreign }})</span>
+    <input type="number" name="principal" value="{{ p.principal|round(0)|int }}" step="100000" min="1">
+  </label>
+
+  <label class="ctl">
+    <span>shock</span>
+    <input type="number" name="shock" value="{{ p.shock }}" step="0.05" min="0" max="0.95">
+  </label>
+
+  <label class="ctl">
+    <span>hedged share</span>
+    <input type="number" name="coverage" value="{{ p.coverage }}" step="0.05" min="0" max="1">
+  </label>
+
+  <input type="hidden" name="forward" value="{{ '%.6f'|format(p.forward) }}">
+  <input type="hidden" name="cost" value="{{ '%.4f'|format(p.cost) }}">
+  <input type="hidden" name="threshold" value="{{ '%.2f'|format(p.threshold) }}">
+  <input type="hidden" name="co2e" value="{{ p.co2e|round(0)|int }}">
+
+  <button class="run-btn" type="submit">Run scenario</button>
+
+  {% if spot.live %}
+    <span class="live-badge on">{{ spot.source }} · live</span>
+  {% else %}
+    <span class="live-badge off">reference assumption · no feed</span>
+  {% endif %}
+</form>
+{% endblock %}
+
+{% block urlbar %}
+<div class="urlbar">
+  <span class="lbl">URL</span>
+  <input id="urlinput" readonly value="/?{{ query_string }}">
+  <button class="copy-btn" type="button" data-copy="#urlinput">copier</button>
+</div>
+{% endblock %}
+
+{% block tabs %}
+<nav class="tabs">
+  <a class="on" href="#kpis">Desk</a>
+  <a href="#exposure">Exposure</a>
+  <a href="#backtest">Scenarios</a>
+  <a href="#grid">Grid</a>
+  <a href="#green">Green</a>
+  <a href="{{ url_for('market_page', scenario=s.key) }}">Market &amp; doc</a>
+  <a href="{{ url_for('code_page') }}">Code</a>
+  <div class="right">
+    <span>{{ s.years }} bars · {{ s.region }}</span>
+    <span>·</span>
+    <span>{{ regime.label|lower }} · {{ regime.shock_label }}</span>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── KPI row, ShockDesk style ───────────────────────────────────────── -->
+<section id="kpis">
+  <div class="kpis">
+    <div class="kpi">
+      <dt>P&amp;L of the shock</dt>
+      <dd class="bad">+{{ "{:,.0f}".format(result.extra_local / 1e6) }} M</dd>
+      <small>{{ s.local }} extra service, whole loan</small>
+    </div>
+    <div class="kpi">
+      <dt>Minimum DSCR</dt>
+      <dd class="{{ 'good' if result.dscr_min_hedged >= p.threshold else 'bad' }}">
+        {{ "%.2f"|format(result.dscr_min_hedged) }}x
+      </dd>
+      <small>hedged · threshold {{ "%.2f"|format(p.threshold) }}x</small>
+    </div>
+    <div class="kpi">
+      <dt>Hedged share</dt>
+      <dd>{{ (p.coverage * 100)|round(0)|int }} %</dd>
+      <small>{{ manager.name }}</small>
+    </div>
+    <div class="kpi">
+      <dt>Cost of cover</dt>
+      <dd class="{{ 'warn' if result.hedge_cost > 0 else 'dim' }}">
+        {{ "{:,.0f}".format(result.hedge_cost / 1e6) }} M
+      </dd>
+      <small>{{ s.local }} over {{ s.years }} years</small>
+    </div>
+    <div class="kpi">
+      <dt>Rate under scenario</dt>
+      <dd>{{ "{:,.3f}".format(result.rate_stressed) }}</dd>
+      <small>{{ spot.pair }} · spot {{ "{:,.3f}".format(result.rate_spot) }}</small>
+    </div>
+    <div class="kpi">
+      <dt>Break-even cover</dt>
+      <dd>
+        {% if break_even is none %}<span class="bad">none</span>{% else %}{{ (break_even * 100)|round(0)|int }} %{% endif %}
+      </dd>
+      <small>{% if break_even is none %}full cover only reaches {{ "%.2f"|format(ceiling) }}x{% else %}to hold {{ "%.2f"|format(p.threshold) }}x{% endif %}</small>
+    </div>
+  </div>
+</section>
+
+<div class="cols">
+  <div>
+
+    <!-- ── exposure engine: the two dials ───────────────────────────── -->
+    <section class="panel" id="exposure">
+      <div class="panel-head">
+        <h2>Exposure</h2>
+        <span class="sub">{{ s.local }} per {{ s.foreign }} · regime: {{ regime.label }}</span>
+        <span class="spacer"></span>
+        <span class="sub">{{ regime.shock_label }}</span>
+      </div>
+
+      <form method="get" class="panel-body controls">
+        <input type="hidden" name="scenario" value="{{ s.key }}">
+        <input type="hidden" name="manager" value="{{ manager.key }}">
+        <input type="hidden" name="principal" value="{{ p.principal|round(0)|int }}">
+
+        <div class="field">
+          <div class="lab">
+            <span>Simulated {{ regime.shock_label }} of the {{ s.local }}</span>
+            <span class="val" id="shock-out">{{ (p.shock * 100)|round(0)|int }} %</span>
+          </div>
+          <input type="range" name="shock" id="shock" min="0" max="95" step="1"
+                 value="{{ (p.shock * 100)|round(0)|int }}">
+          <div class="chips">
+            {% for val, label in presets %}
+              <a class="chip {{ 'on' if (p.shock - val)|abs < 0.005 else '' }}"
+                 href="{{ qs_url(shock='%.2f'|format(val)) }}">{{ label }} {{ (val*100)|round(0)|int }}%</a>
+            {% endfor %}
+          </div>
+          <small class="hint">A 20 % loss of value is a 25 % rise in the rate — the two are not the same number.</small>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <div class="lab">
+              <span>Share of debt service hedged</span>
+              <span class="val" id="coverage-out">{{ (p.coverage * 100)|round(0)|int }} %</span>
+            </div>
+            <input type="range" name="coverage" id="coverage" min="0" max="100" step="5"
+                   value="{{ (p.coverage * 100)|round(0)|int }}">
+            <div class="chips">
+              {% for c in [0, 25, 50, 75, 100] %}
+                <a class="chip {{ 'on' if (p.coverage * 100 - c)|abs < 2.5 else '' }}"
+                   href="{{ qs_url(coverage='%.2f'|format(c/100)) }}">{{ c }} %</a>
+              {% endfor %}
+              <a class="chip" href="{{ url_for('pick_manager', key=manager.key, **request.args) if false else url_for('desk', scenario=s.key, manager=manager.key, coverage='%.2f'|format(proposal.coverage), shock='%.4f'|format(p.shock), forward='%.6f'|format(p.forward), cost='%.4f'|format(p.cost), threshold='%.2f'|format(p.threshold), co2e=p.co2e|round(0)|int) }}">
+                ↳ apply manager
+              </a>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lab">
+              <span>Hedged rate · {{ s.local }} per {{ s.foreign }}</span>
+              <span class="val">{{ "{:,.4f}".format(p.forward) }}</span>
+            </div>
+            <input type="number" name="forward" value="{{ '%.6f'|format(p.forward) }}" step="0.000001" min="0.000001">
+            <small class="hint">You supply it: not a forward quote. Above spot, the gap is the carry you pay.</small>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <div class="lab">
+              <span>Cost of cover</span>
+              <span class="val" id="cost-out">{{ "%.2f"|format(p.cost * 100) }} %</span>
+            </div>
+            <input type="range" name="cost" id="cost" min="0" max="10" step="0.25"
+                   value="{{ (p.cost * 100)|round(2) }}">
+            <small class="hint">Per year, on the hedged share. Zero is a choice, not a market fact.</small>
+          </div>
+          <div class="field">
+            <div class="lab">
+              <span>Minimum DSCR you accept</span>
+              <span class="val" id="threshold-out">{{ "%.2f"|format(p.threshold) }}x</span>
+            </div>
+            <input type="range" name="threshold" id="threshold" min="0.8" max="2.5" step="0.05"
+                   value="{{ p.threshold }}">
+            <small class="hint">Your covenant assumption: the model does not know your lender's.</small>
+          </div>
+        </div>
+
+        <button class="run-btn" type="submit">Recompute</button>
+      </form>
+
+      <div class="readout">
+        <div><div class="k">spot</div><div class="v">{{ "{:,.3f}".format(result.rate_spot) }}</div></div>
+        <div class="arrow">→</div>
+        <div><div class="k">under scenario</div><div class="v hot">{{ "{:,.3f}".format(result.rate_stressed) }}</div></div>
+        <div class="sep"></div>
+        <div><div class="k">unhedged service</div><div class="v">{{ "{:,.0f}".format(result.service_unhedged) }}</div></div>
+        <div><div class="k">hedged service</div><div class="v">{{ "{:,.0f}".format(result.service_hedged) }}</div></div>
+        <div class="sep"></div>
+        <div><div class="k">saved</div><div class="v" style="color:var(--mint)">{{ "{:,.0f}".format(result.hedge_saving) }}</div></div>
+        <div><div class="k">cost</div><div class="v" style="color:var(--amber)">{{ "{:,.0f}".format(result.hedge_cost) }}</div></div>
+      </div>
+    </section>
+
+    <!-- ── scenarios / backtest ─────────────────────────────────────── -->
+    <section class="panel" id="backtest">
+      <div class="panel-head">
+        <h2>Scenario P&amp;L · year by year</h2>
+        <span class="sub">DSCR hedged vs unhedged</span>
+        <span class="spacer"></span>
+        <a class="sub" href="{{ csv_url }}">export csv ↓</a>
+      </div>
+      <div class="panel-body">
+        <svg class="chart" viewBox="0 0 {{ s.years * 30 + 44 }} 210" role="img"
+             aria-label="DSCR per year, hedged and unhedged, with the covenant line">
+          {% set vals = result.rows|map(attribute='DSCR sans couverture')|list + result.rows|map(attribute='DSCR avec couverture')|list %}
+          {% set maxd = ([vals|max, p.threshold]|max * 1.2) %}
+          {% set h = 150 %}
+          {% set base = 175 %}
+          <!-- horizontal grid -->
+          {% for f in [0, 0.25, 0.5, 0.75, 1.0] %}
+            {% set y = base - (f * h) %}
+            <line class="grid-line" x1="34" x2="{{ s.years * 30 + 34 }}" y1="{{ y }}" y2="{{ y }}"/>
+            <text class="ylab" x="0" y="{{ y + 3 }}">{{ "%.2f"|format(f * maxd) }}x</text>
+          {% endfor %}
+          <!-- covenant -->
+          {% set ythr = base - (p.threshold / maxd * h) %}
+          <line class="thr" x1="34" x2="{{ s.years * 30 + 34 }}" y1="{{ ythr }}" y2="{{ ythr }}"/>
+          <text class="thr-lab" x="38" y="{{ ythr - 4 }}">covenant {{ "%.2f"|format(p.threshold) }}x</text>
+
+          {% for r in result.rows %}
+            {% set i = loop.index0 %}
+            {% set x = 38 + i * 30 %}
+            {% set yu = base - (r['DSCR sans couverture'] / maxd * h) %}
+            {% set yh = base - (r['DSCR avec couverture'] / maxd * h) %}
+            <rect class="bar-un" x="{{ x }}" y="{{ yu }}" width="10" height="{{ base - yu }}"/>
+            <rect class="bar-hg {{ 'hot' if r['DSCR avec couverture'] >= p.threshold else '' }}"
+                  x="{{ x + 11 }}" y="{{ yh }}" width="10" height="{{ base - yh }}"/>
+            {% if loop.index == 1 or loop.index == s.years or loop.index % 3 == 0 %}
+              <text class="xlab" x="{{ x + 10 }}" y="{{ base + 14 }}">{{ loop.index }}</text>
+            {% endif %}
+          {% endfor %}
+          <line class="axis-line" x1="34" x2="{{ s.years * 30 + 34 }}" y1="{{ base }}" y2="{{ base }}"/>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="un"></i>unhedged</span>
+        <span><i class="hg"></i>hedged</span>
+        <span><i class="thr"></i>your covenant</span>
+        <span>· bars = {{ s.years }} years · cost of cover included in the hedged bar</span>
+      </div>
+
+      <div class="panel-body tight scroll">
+        <table>
+          <thead><tr>
+            <th>Year</th><th>Service ({{ s.foreign }})</th><th>Rate</th>
+            <th>Unhedged ({{ s.local }})</th><th>Hedged ({{ s.local }})</th>
+            <th>Cost</th><th>DSCR un</th><th>DSCR hedged</th>
+          </tr></thead>
+          <tbody>
+          {% for r in result.rows %}
+            <tr>
+              <th>{{ r['Année'] }}</th>
+              <td>{{ "{:,.0f}".format(r['Service dette (devise)']) }}</td>
+              <td>{{ "{:,.3f}".format(r['Taux scénario']) }}</td>
+              <td>{{ "{:,.0f}".format(r['Service sans couverture (local)']) }}</td>
+              <td>{{ "{:,.0f}".format(r['Service avec couverture (local)']) }}</td>
+              <td>{{ "{:,.0f}".format(r['Coût couverture (local)']) }}</td>
+              <td class="{{ 'ko' if r['DSCR sans couverture'] < p.threshold else 'ok' }}">{{ "%.2f"|format(r['DSCR sans couverture']) }}</td>
+              <td class="{{ 'ko' if r['DSCR avec couverture'] < p.threshold else 'ok' }}">{{ "%.2f"|format(r['DSCR avec couverture']) }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── grid ─────────────────────────────────────────────────────── -->
+    <section class="panel" id="grid">
+      <div class="panel-head">
+        <h2>Shock × coverage</h2>
+        <span class="sub">minimum DSCR, everything else held</span>
+        <span class="spacer"></span>
+        <span class="sub">green ≥ covenant · red &lt; 1.00x</span>
+      </div>
+      <div class="panel-body tight scroll">
+        <table class="grid">
+          <thead><tr>
+            <th>shock ↓ / hedged →</th>
+            {% for c in grid.coverages %}<th>{{ (c * 100)|round(0)|int }} %</th>{% endfor %}
+          </tr></thead>
+          <tbody>
+          {% for row in grid.rows %}
+            <tr>
+              <th>{{ (row.shock * 100)|round(0)|int }} %</th>
+              {% for v in row.cells %}
+                <td class="{{ 'ok' if v >= p.threshold else ('mid' if v >= 1.0 else 'ko') }}">{{ "%.2f"|format(v) }}x</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── green ────────────────────────────────────────────────────── -->
+    <section class="panel green" id="green">
+      <div class="panel-head">
+        <h2>The same debt, read in carbon terms</h2>
+        <span class="sub">per tCO₂e avoided by the asset</span>
+      </div>
+      <div class="panel-body controls">
+        <form method="get" class="controls">
+          <input type="hidden" name="scenario" value="{{ s.key }}">
+          <input type="hidden" name="manager" value="{{ manager.key }}">
+          <input type="hidden" name="shock" value="{{ '%.4f'|format(p.shock) }}">
+          <input type="hidden" name="coverage" value="{{ '%.4f'|format(p.coverage) }}">
+          <input type="hidden" name="forward" value="{{ '%.6f'|format(p.forward) }}">
+          <input type="hidden" name="cost" value="{{ '%.4f'|format(p.cost) }}">
+          <input type="hidden" name="threshold" value="{{ '%.2f'|format(p.threshold) }}">
+          <input type="hidden" name="principal" value="{{ p.principal|round(0)|int }}">
+          <div class="field">
+            <div class="lab"><span>Avoided CO₂e per year</span><span class="val">tCO₂e</span></div>
+            <input type="number" name="co2e" value="{{ p.co2e|round(0)|int }}" step="100" min="0">
+            <small class="hint"><b>Basis:</b> {{ s.co2e_basis }} An assumption, not a measurement — replace it.</small>
+          </div>
+          <button class="run-btn" type="submit">Recompute</button>
+        </form>
+
+        <div class="kpis" style="margin-bottom:0">
+          <div class="kpi">
+            <dt>Debt service per tCO₂e</dt>
+            <dd>{{ "{:,.0f}".format(green.service_per_tco2e) if green.service_per_tco2e else "—" }}</dd>
+            <small>{{ s.local }}, life of loan</small>
+          </div>
+          <div class="kpi">
+            <dt>Added by the shock</dt>
+            <dd class="warn">{{ "{:,.0f}".format(green.shock_cost_per_tco2e) if green.shock_cost_per_tco2e else "—" }}</dd>
+            <small>per tCO₂e, exchange rate only</small>
+          </div>
+          <div class="kpi">
+            <dt>Brought back by the hedge</dt>
+            <dd class="good">{{ "{:,.0f}".format(green.hedge_saving_per_tco2e) if green.hedge_saving_per_tco2e else "—" }}</dd>
+            <small>per tCO₂e, net of cost</small>
+          </div>
+          <div class="kpi">
+            <dt>Total financed</dt>
+            <dd>{{ "{:,.0f}".format(green.total_co2e) }}</dd>
+            <small>tCO₂e over {{ s.years }} years</small>
+          </div>
+        </div>
+
+        <p class="callout mint">
+          <strong>What this does not say.</strong> Not that hedging makes a project greener, nor
+          that a financial cost is an environmental one. Only this: a currency shock consumes
+          local cash that could service the same asset, so the cost of avoided carbon rises with
+          the exchange rate. Whether that changes climate outcomes is an empirical question this
+          prototype cannot answer.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ── right column: desk panel, manager, forward, market ─────────── -->
+  <aside class="side">
+
+    <section class="panel">
+      <div class="panel-head"><h2>Forward</h2><span class="spacer"></span><span class="sub">{{ regime.label|lower }}</span></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-top:0">{{ regime.note }}</p>
+        <div class="kv"><span class="k">pair</span><span class="v">{{ spot.pair }}</span></div>
+        <div class="kv"><span class="k">spot used</span><span class="v">{{ "{:,.4f}".format(result.rate_spot) }}</span></div>
+        <div class="kv"><span class="k">source</span>
+          <span class="v {{ 'good' if spot.live else 'warn' }}">{{ spot.source }}</span></div>
+        <div class="kv"><span class="k">as of</span><span class="v">{{ spot.as_of }}</span></div>
+        <div class="kv"><span class="k">shock label</span><span class="v">{{ regime.shock_label }}</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Manager</h2><span class="spacer"></span><span class="sub">{{ manager.family }}</span></div>
+      <div class="panel-body">
+        <div class="src {{ 'live' if manager.key != 'none' else 'assume' }}">{{ manager.file }}</div>
+        <p class="hint" style="margin-top:0">{{ proposal.rationale }}</p>
+        <div class="kv"><span class="k">proposed cover</span><span class="v good">{{ (proposal.coverage * 100)|round(0)|int }} %</span></div>
+        {% for k, v in proposal.trace %}
+          <div class="kv"><span class="k">{{ k }}</span><span class="v">{{ v }}</span></div>
+        {% endfor %}
+        <p style="margin:14px 0 8px"><a class="chip" href="{{ url_for('desk', scenario=s.key, manager=manager.key, shock='%.4f'|format(p.shock), coverage='%.4f'|format(proposal.coverage), forward='%.6f'|format(p.forward), cost='%.4f'|format(p.cost), threshold='%.2f'|format(p.threshold), co2e=p.co2e|round(0)|int, principal=p.principal|round(0)|int) }}">apply this proposal →</a></p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Managers</h2><span class="spacer"></span><span class="sub">{{ managers|length }} files</span></div>
+      <div class="panel-body">
+        <div class="manager-list">
+          {% for m in managers %}
+            <a class="manager {{ 'on' if m.key == manager.key }}" href="{{ url_for('pick_manager', key=m.key, **request.args) }}">
+              <h3>{{ m.name }}</h3>
+              <p>{{ m.tagline }}</p>
+              <span class="f">{{ m.file }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Universe</h2><span class="spacer"></span><span class="sub">regimes</span></div>
+      <div class="panel-body">
+        {% for code, meta in universe.items() %}
+          <div class="kv">
+            <span class="k">{{ code }}/{{ meta[3] }}</span>
+            <span class="v {{ 'good' if meta[2] == 'hard peg' else '' }}">{{ meta[2] }}</span>
+          </div>
+        {% endfor %}
+        <p style="margin:12px 0 0"><a class="chip" href="{{ url_for('market_page', scenario=s.key) }}">open market panel →</a></p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>API</h2><span class="spacer"></span><span class="sub">json</span></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-top:0">Same numbers, same URL, as JSON:</p>
+        <pre class="code" style="font-size:10.5px; line-height:1.5">GET {{ api_url }}</pre>
+        <p class="hint">Add <code>&amp;live=1</code> to fetch a reference rate from an online provider when the host has internet.</p>
+      </div>
+    </section>
+
+  </aside>
+</div>
+{% endblock %}

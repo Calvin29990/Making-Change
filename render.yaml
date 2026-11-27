@@ -1,0 +1,16 @@
+# Render blueprint — one web service, no database, no secrets.
+services:
+  - type: web
+    name: making-change-desk
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 60 "desk.webapp:app"
+    healthCheckPath: /healthz
+    envVars:
+      - key: MC_LIVE_DEFAULT
+        value: "1"          # try a live reference rate on first load
+      - key: MC_CACHE_TTL
+        value: "43200"      # 12 h
+      - key: PYTHON_VERSION
+        value: "3.11.9"

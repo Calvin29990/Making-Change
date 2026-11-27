@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Managers — Making Change{% endblock %}
+
+{% block tabs %}
+<nav class="tabs">
+  <a href="{{ url_for('desk') }}">Desk</a>
+  <a href="{{ url_for('desk') }}#exposure">Exposure</a>
+  <a href="{{ url_for('desk') }}#backtest">Scenarios</a>
+  <a href="{{ url_for('desk') }}#grid">Grid</a>
+  <a href="{{ url_for('desk') }}#green">Green</a>
+  <a href="{{ url_for('market_page') }}">Market &amp; doc</a>
+  <a class="on" href="{{ url_for('code_page') }}">Code</a>
+  <div class="right"><span>{{ blocks|length }} managers</span></div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>A hedge manager is a Python file</h2>
+    <span class="sub">auditable in a minute</span>
+  </div>
+  <div class="panel-body">
+    <p class="hint" style="margin-top:0">
+      Each manager receives a <code>HedgeView</code> — years, capacity, the shock being played, the
+      spot rate <i>with its provenance</i>, the hedged rate, the cost, the covenant, and a
+      <code>dscr_with(coverage)</code> callable — and returns a coverage plus the reasoning.
+      It never does the loan arithmetic itself, so it cannot disagree with the tested engine.
+    </p>
+    <p class="hint">
+      To add one: subclass <code>Manager</code> in <code>desk/managers.py</code>, set
+      <code>key</code>, <code>name</code>, <code>tagline</code>, <code>file</code>, implement
+      <code>propose</code>, and register it in <code>MANAGERS</code>. It appears in the menu on
+      reload. No build step, no plugin API.
+    </p>
+  </div>
+</section>
+
+{% for m, src in blocks %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>{{ m.name }}</h2>
+    <span class="sub">{{ m.file }}</span>
+    <span class="spacer"></span>
+    <span class="sub">{{ m.family }}</span>
+  </div>
+  <div class="panel-body tight">
+    <pre class="code">{{ src }}</pre>
+  </div>
+</section>
+{% endfor %}
+
+<section class="panel">
+  <div class="panel-head"><h2>Managers as data</h2><span class="spacer"></span><span class="sub">json</span></div>
+  <div class="panel-body">
+    <p class="hint" style="margin-top:0">
+      The same objects are serialisable, so a manager list can be exported, diffed, or cited:
+      <code>GET /api/managers</code>.
+    </p>
+  </div>
+</section>
+{% endblock %}
