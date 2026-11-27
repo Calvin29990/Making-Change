@@ -47,8 +47,7 @@ function readInputs() {
     shock: +el("shock").value / 100,
     coverage: +el("cov").value / 100,
     cost: +el("cost").value / 100,
-    threshold: +el("thr").value,
-    co2: +el("co2").value
+    threshold: +el("thr").value
   };
 }
 
@@ -68,7 +67,6 @@ function render() {
   el("cov-val").textContent = Math.round(i.coverage * 100);
   el("cost-val").textContent = (i.cost * 100).toFixed(2);
   el("thr-val").textContent = i.threshold.toFixed(2);
-  el("co2-val").textContent = fmt(i.co2);
   document.querySelectorAll("input[type=range]").forEach(paintRange);
 
   // engine: the explicit hedge is the forward rate at spot (a flat forward,
@@ -107,12 +105,7 @@ function render() {
       <td class="${r.dscrHg < i.threshold ? "ko" : "ok"}">${r.dscrHg.toFixed(2)}</td>
     </tr>`).join("");
 
-  // green
-  const totalCo2 = i.co2 * CASE.years;
-  el("g-service").textContent = totalCo2 ? fmt(serviceUn / totalCo2) : "—";
-  el("g-shock").textContent = totalCo2 ? fmt(extra / totalCo2) : "—";
-  const saving = Math.max(serviceUn - serviceHg, 0);
-  el("g-hedge").textContent = totalCo2 ? fmt(saving / totalCo2) : "—";
+
 }
 
 /* SVG chart, hand-drawn: two bars per year, plus the threshold line. */
@@ -149,7 +142,7 @@ function drawChart(rows, threshold) {
 }
 
 /* wire the sliders */
-["shock", "cov", "cost", "thr", "co2"].forEach(id => {
+["shock", "cov", "cost", "thr"].forEach(id => {
   el(id).addEventListener("input", render);
 });
 render();

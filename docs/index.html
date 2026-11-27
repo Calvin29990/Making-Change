@@ -3,26 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Making Change — simple FX dashboard</title>
+<title>Making Change — Academic FX laboratory</title>
 <link rel="stylesheet" href="dashboard.css">
 </head>
+<body>
 <div class="wrap">
 
   <header>
     <h1>Making Change</h1>
-    <span class="tag">simple dashboard</span>
+    <span class="tag">academic prototype</span>
   </header>
   <p class="lede">
     A project that earns in a local currency and borrows in a hard currency owes
-    more local currency when its money loses value. Move the two sliders and see
+    more local currency when its money loses value. Adjust the assumptions and see
     what it does to the debt — then what a hedge does, and what it costs.
   </p>
 
   <!-- ─────────── the case ─────────── -->
   <section class="panel">
-    <h2>The case</h2>
+    <h2>Classical teaching case · infrastructure SPV</h2>
     <div class="kpis" style="margin-bottom:16px">
-      <div class="kpi"><dt>Project</dt><dd style="font-size:15px">CEMAC infrastructure loan</dd><small>Central Africa</small></div>
+      <div class="kpi"><dt>Project</dt><dd style="font-size:15px">Fictional infrastructure SPV</dd><small>CEMAC setting · not an observed company</small></div>
       <div class="kpi"><dt>Debt</dt><dd style="font-size:15px">10,000,000 EUR</dd><small id="c-mat">15 years · 5.0 %</small></div>
       <div class="kpi"><dt>Revenue currency</dt><dd style="font-size:15px">XAF</dd><small>pegged to the euro</small></div>
       <div class="kpi"><dt>Rate at start</dt><dd style="font-size:15px">655.957</dd><small>XAF per 1 EUR</small></div>
@@ -32,6 +33,22 @@
       shock below is not an ordinary fluctuation — it is a <b>hypothetical break of
       the parity</b>, an institutional event. The page labels it that way on purpose.
     </p>
+  </section>
+
+  <section class="panel" aria-labelledby="assumptions-title">
+    <h2 id="assumptions-title">Assumptions and provenance</h2>
+    <p>This is a <strong>constructed teaching case</strong>, not a published business-school case or an empirical company study. No real company is assigned invented financial data.</p>
+    <table aria-label="Assumption register"><thead><tr><th>Parameter</th><th>Assumption / status</th></tr></thead><tbody>
+      <tr><th>Loan</th><td>EUR 10 million · 15 years · 5% fixed interest: illustrative choices</td></tr>
+      <tr><th>CFADS</th><td>XAF 850 million/year, constant: illustrative, not revenue</td></tr>
+      <tr><th>Amortisation</th><td>Equal annual principal; interest on opening balance</td></tr>
+      <tr><th>FX stress</th><td>Immediate, permanent parity break; no probability assigned</td></tr>
+      <tr><th>Hedge</th><td>Constant share of each annual payment, locked at 655.957 XAF/EUR</td></tr>
+      <tr><th>Hedge charge</th><td>Applied to covered annual debt service converted at the locked rate</td></tr>
+      <tr><th>DSCR threshold</th><td>1.20x starting assumption, not a documented lender covenant</td></tr>
+    </tbody></table>
+    <p class="hint">The locked rate equals initial spot by construction. It is not an observed forward quote: interest differentials, tenor, liquidity, counterparty risk, collateral and hedge availability are not modelled. Even a positive charge does not make this a market-priced forward.</p>
+    <p class="hint">DSCR = annual cash flow available for debt service (CFADS) / annual debt service in XAF, including the illustrative hedge charge in the hedged scenario. CFADS does not react to FX, inflation or operations. The shock is applied in every year; results are nominal, not discounted.</p>
   </section>
 
   <!-- ─────────── controls ─────────── -->
@@ -60,7 +77,7 @@
       <div class="ctl">
         <div class="lab">
           <span>Cost of the hedge</span>
-          <span class="val"><span id="cost-val">0.00</span> %/yr</span>
+          <span class="val"><span id="cost-val">0.00</span> % of covered service</span>
         </div>
         <input id="cost" type="range" min="0" max="5" step="0.25" value="0" aria-label="cost">
         <div class="hint">Zero is a choice you make, not a fact about the market.</div>
@@ -128,53 +145,28 @@
     </div>
   </section>
 
-  <!-- ─────────── green ─────────── -->
-  <section class="panel green">
-    <h2>The same debt, in carbon terms</h2>
-    <div class="ctl">
-      <div class="lab">
-        <span>Avoided CO₂e per year</span>
-        <span class="val"><span id="co2-val">12,000</span> tCO₂e</span>
-      </div>
-      <input id="co2" type="range" min="0" max="60000" step="1000" value="12000" aria-label="co2e">
-      <div class="hint">An assumption about the asset — grid or water project. Not a measurement.</div>
-    </div>
-
-    <div class="kpis">
-      <div class="kpi">
-        <dt>Debt service per tCO₂e</dt>
-        <dd id="g-service">—</dd>
-        <small>XAF, life of loan</small>
-      </div>
-      <div class="kpi">
-        <dt>Added by the shock</dt>
-        <dd class="warn" id="g-shock">—</dd>
-        <small>per tCO₂e, exchange rate only</small>
-      </div>
-      <div class="kpi">
-        <dt>Brought back by the hedge</dt>
-        <dd class="good" id="g-hedge">—</dd>
-        <small>per tCO₂e, net of cost</small>
-      </div>
-    </div>
-
-    <div class="note">
-      <strong>What this does not say.</strong> Not that hedging makes a project greener,
-      nor that a financial cost is an environmental one. Only this: a currency shock takes
-      local cash that could have serviced the same asset, so the cost of avoided carbon
-      rises with the exchange rate.
+  <!-- ─────────── limits ─────────── -->
+  <section class="panel">
+    <h2>What this does not say</h2>
+    <div class="warnbox">
+      <strong>Illustrative simulation, not advice.</strong> No probability is attached to
+      any shock; the locked hedge rate is fixed at initial spot and the charge is chosen by you, never quoted; debt amortises
+      in equal slices, cash available is constant; no taxes, reserves, covenant enforcement or
+      construction period. Comparing two scenarios shows a mechanism — not a proven effect.
     </div>
   </section>
 
-  <!-- ─────────── limits ─────────── -->
-  <section class="panel">
-    <h2>What this is not</h2>
-    <div class="warnbox">
-      <strong>Illustrative simulation, not advice.</strong> No probability is attached to
-      any shock; the hedge price and its cost are typed by you, never quoted; debt amortises
-      in equal slices, cash available is constant; no taxes, reserves, covenants or
-      construction period. Comparing two scenarios shows a mechanism — not a proven effect.
-    </div>
+  <section class="panel" id="references">
+    <h2>Academic framework — not model validation</h2>
+    <p>These selected references motivate the research question. <strong>None validates the numerical calibration, the flat hedge rate or a causal gain from hedging in this prototype.</strong></p>
+    <ul>
+      <li><a href="https://doi.org/10.2307/3665446">Adler &amp; Dumas (1984), Exposure to Currency Risk</a>: economic exposure is broader than the contractual debt-service exposure isolated here.</li>
+      <li><a href="https://doi.org/10.1111/j.1540-6261.1993.tb05123.x">Froot, Scharfstein &amp; Stein (1993), Risk Management</a>: financing frictions motivate hedging; investment and financing decisions are not endogenous in this model.</li>
+      <li><a href="https://doi.org/10.1111/j.1745-6622.2000.tb00043.x">Kleimeier &amp; Megginson (2000), Project Finance Loans</a>: project-finance context, not a source for this loan's parameters.</li>
+      <li><a href="https://doi.org/10.1093/rfs/14.1.243">Allayannis &amp; Weston (2001)</a>: association in US non-financial firms, not causal evidence for an African infrastructure SPV.</li>
+    </ul>
+    <p><a href="REFERENCES-ACADEMIQUES.md">Full reference register and limitations</a> · <a href="AUDIT-ACADEMIQUE.md">Audit and release scope</a></p>
+    <p class="hint">The carbon panel is withdrawn at this academic stage: no project baseline, additionality assessment or verified emissions dataset supports it. No environmental impact conclusion is made.</p>
   </section>
 
   <footer>

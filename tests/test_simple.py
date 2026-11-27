@@ -95,10 +95,11 @@ class GitHubPagesTests(unittest.TestCase):
         self.assertTrue((ROOT / "docs" / "dashboard.css").exists())
         self.assertTrue((ROOT / "docs" / "dashboard.js").exists())
 
-    def test_page_has_no_external_host(self):
+    def test_page_has_no_external_runtime_dependency(self):
         html = GH_PAGES.read_text()
         self.assertNotIn("http://", html)
-        self.assertNotIn("https://", html)
+        import re
+        self.assertFalse(re.search(r'(?:src|href)="https?://[^" ]+"', "\n".join(re.findall(r"<(?:script|link)[^>]*>", html))))
         self.assertIn("dashboard.css", html)
         self.assertIn("dashboard.js", html)
 
@@ -187,7 +188,8 @@ process.stdout.write(JSON.stringify(out));
         self.assertTrue(result["dscrHg"].endswith("x"))
         self.assertGreater(result["chart"], 500, "chart should draw bars")
         self.assertEqual(result["rows"], CASE["years"])
-        self.assertNotEqual(result["green"], "—")
+        self.assertNotIn('id="co2"', html)
+        self.assertIn("constructed teaching case", html)
 
 
 if __name__ == "__main__":
