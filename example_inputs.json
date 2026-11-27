@@ -1,0 +1,11 @@
+{
+  "principal": 10000000,
+  "annual_interest": 0.05,
+  "years": 15,
+  "rate": 655.957,
+  "annual_cfads": 850000000,
+  "depreciation": 0.2,
+  "coverage": 0.5,
+  "forward_rate": 655.957,
+  "annual_cost_rate": 0
+}

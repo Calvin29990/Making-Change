@@ -1,5 +1,7 @@
 """Deterministic annual debt-service stress test. No market data or execution."""
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+from math import isfinite
+from numbers import Real
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,12 @@ class Inputs:
 
 
 def simulate(x: Inputs) -> list[dict]:
+    for field in fields(x):
+        value = getattr(x, field.name)
+        if isinstance(value, bool) or not isinstance(value, Real) or not isfinite(value):
+            raise ValueError(f"{field.name} doit être un nombre fini.")
+    if not isinstance(x.years, int):
+        raise ValueError("La durée doit être un nombre entier d'années.")
     if not (x.principal > 0 and 1 <= x.years <= 30 and x.rate > 0 and x.forward_rate > 0):
         raise ValueError('Le principal et les taux de change doivent être positifs ; durée entre 1 et 30 ans.')
     if not (0 <= x.annual_interest <= 1 and 0 <= x.annual_cost_rate <= 1 and x.annual_cfads >= 0):
