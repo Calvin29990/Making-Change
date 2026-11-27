@@ -3,9 +3,11 @@
 Research project linked to the **SKEMA Business School** thesis:
 *Making Change: How FX Risk Management Enables Sustainable Infrastructure Financing in Africa and Latin America.*
 
-> **Repository status**: Public research and working repository until thesis completion (6-month horizon), accessible to the **SKEMA Business School jury** and **banking professionals** participating in the review.
-> **Authors**: Calvin Minang & Edwin Zinsou
-> **Academic Supervision**: Mr. Ayundy (SKEMA Business School)
+> **Repository status**: public research and working repository, maintained up to the closure of the thesis (6-month horizon), in an academic framework at **SKEMA Business School** (institutional reference only).
+>
+> **Contributors and reviewers**: this repository is produced by the **Making Change project contributors** and is shared, over the same period and up to the closure of the thesis, with the **industry professionals associated with the review**.
+>
+> **No individual is named**: no person is identified in this repository — neither in the code, the documentation, nor the working documents — until their explicit consent has been obtained.
 
 ---
 
