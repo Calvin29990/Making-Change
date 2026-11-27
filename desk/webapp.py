@@ -198,6 +198,17 @@ def pick_manager(key):
     return redirect(url_for("desk", **args))
 
 
+@app.get("/simple")
+def simple_page():
+    """Serve the one-file dashboard from the Flask app, same origin as the desk."""
+    from pathlib import Path as _Path
+
+    return Response(
+        (_Path(__file__).parent.parent / "simple" / "index.html").read_text(),
+        mimetype="text/html",
+    )
+
+
 @app.get("/market")
 def market_page():
     s = sc.get(request.args.get("scenario", sc.DEFAULT_SCENARIO))
