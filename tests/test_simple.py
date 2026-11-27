@@ -84,6 +84,47 @@ class DashboardParityTests(unittest.TestCase):
         self.assertTrue(all(r["cost"] == 0 for r in rows))
 
 
+GH_PAGES = ROOT / "docs" / "index.html"
+
+
+class GitHubPagesTests(unittest.TestCase):
+    """docs/ is what GitHub Pages serves: it must stay in step with simple/."""
+
+    def test_assets_exist(self):
+        self.assertTrue(GH_PAGES.exists())
+        self.assertTrue((ROOT / "docs" / "dashboard.css").exists())
+        self.assertTrue((ROOT / "docs" / "dashboard.js").exists())
+
+    def test_page_has_no_external_host(self):
+        html = GH_PAGES.read_text()
+        self.assertNotIn("http://", html)
+        self.assertNotIn("https://", html)
+        self.assertIn("dashboard.css", html)
+        self.assertIn("dashboard.js", html)
+
+    def test_script_matches_the_single_file_version(self):
+        """The published script must be byte-identical to the tested one."""
+        src = HTML.read_text()
+        embedded = src[src.index('<script>\n"use strict";') + len("<script>"): src.rindex("</script>")].strip()
+        published = (ROOT / "docs" / "dashboard.js").read_text().strip()
+        self.assertEqual(embedded, published)
+
+    def test_published_script_computes_the_same_rows(self):
+        script = (ROOT / "docs" / "dashboard.js").read_text()
+        fn_start = script.index("function simulate(")
+        fn_end = script.index("/* ───────────────────────── formatting", fn_start)
+        runner = (
+            "const CASE = " + json.dumps(CASE) + ";\n"
+            + script[fn_start:fn_end]
+            + "\nprocess.stdout.write(JSON.stringify(simulate(0.2,0.5,0.0,655.957)));"
+        )
+        out = subprocess.run([NODE, "-e", runner], capture_output=True, text=True, timeout=30)
+        self.assertEqual(out.returncode, 0, out.stderr[:400])
+        rows = json.loads(out.stdout)
+        self.assertEqual(rows[0]["year"], 1)
+        self.assertAlmostEqual(rows[0]["rateStressed"], 655.957 / 0.8, places=6)
+
+
 class DashboardFileTests(unittest.TestCase):
     def test_single_file_no_external_dependency(self):
         html = HTML.read_text()
